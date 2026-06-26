@@ -1,0 +1,229 @@
+import React, { useState, useMemo } from 'react';
+import { Star, Search, Play } from 'lucide-react';
+import { useLangStore } from '../../lib/store';
+import { locales } from '../../data/locales';
+import gamesData from '../../data/games.json';
+import RetroCard from '../ui/RetroCard';
+import RetroButton from '../ui/RetroButton';
+import RetroInput from '../ui/RetroInput';
+import { playHover, playSuccess } from '../../lib/sfx';
+import Swal from 'sweetalert2';
+
+export default function GameStore() {
+  const { lang } = useLangStore();
+  const t = locales[lang];
+
+  // Search & Filter state
+  const [search, setSearch] = useState('');
+  const [genre, setGenre] = useState('all');
+  const [sortBy, setSortBy] = useState('rating');
+
+  // Parse genres dynamically
+  const genres = useMemo(() => {
+    const list = gamesData.map((game) => game.genre.split(' / ')[0]);
+    return ['all', ...new Set(list)];
+  }, []);
+
+  // Filter and sort games
+  const filteredGames = useMemo(() => {
+    return gamesData
+      .filter((game) => {
+        const title = (game.title[lang] || game.title['en'] || '').toLowerCase();
+        const desc = (game.description[lang] || game.description['en'] || '').toLowerCase();
+        const query = search.toLowerCase();
+        const matchesSearch = title.includes(query) || desc.includes(query);
+
+        const matchesGenre = genre === 'all' || game.genre.toLowerCase().includes(genre.toLowerCase());
+
+        return matchesSearch && matchesGenre;
+      })
+      .sort((a, b) => {
+        if (sortBy === 'rating') return b.rating - a.rating;
+        if (sortBy === 'title-asc') {
+          const tA = a.title[lang] || a.title['en'];
+          const tB = b.title[lang] || b.title['en'];
+          return tA.localeCompare(tB);
+        }
+        if (sortBy === 'title-desc') {
+          const tA = a.title[lang] || a.title['en'];
+          const tB = b.title[lang] || b.title['en'];
+          return tB.localeCompare(tA);
+        }
+        if (sortBy === 'year') return b.releaseYear - a.releaseYear;
+        return 0;
+      });
+  }, [search, genre, sortBy, lang]);
+
+  const handleLaunchGame = (gameTitle) => {
+    playSuccess();
+    
+    Swal.fire({
+      title: lang === 'id' ? 'Menjalankan Game...' : lang === 'jp' ? 'ゲームを起動中...' : 'Launching Game...',
+      text: `${gameTitle} ${lang === 'id' ? 'sedang dimuat di sistem.' : lang === 'jp' ? 'がシステムにロードされています。' : 'is loading into systems.'}`,
+      icon: 'success',
+      showConfirmButton: false,
+      timer: 2000,
+      background: document.documentElement.classList.contains('dark') ? '#0f172a' : '#ffffff',
+      color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#0f172a',
+      customClass: {
+        popup: 'border-4 border-slate-950 font-inter text-sm rounded-none',
+      }
+    }).then(() => {
+      // Mock opening game target url
+      window.open('https://itch.io', '_blank');
+    });
+  };
+
+  return (
+    <section className="py-12 md:py-16 px-4 md:px-8 transition-colors duration-200">
+      <div className="max-w-7xl mx-auto">
+        
+        {/* Title Header */}
+        <div className="text-center flex flex-col items-center gap-2 mb-10">
+          <h1 className="font-press text-lg md:text-xl uppercase tracking-wider text-slate-900 dark:text-slate-50">
+            {t.storeTitle}
+          </h1>
+          <p className="font-inter text-xs md:text-sm text-slate-650 dark:text-slate-450 max-w-lg mt-2">
+            {t.storeSubtitle}
+          </p>
+        </div>
+
+        {/* Filters Panel */}
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-8">
+          
+          {/* Search box */}
+          <div className="md:col-span-6 relative">
+            <RetroInput
+              id="search"
+              placeholder={t.storeSearchPlaceholder}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full"
+            />
+            <div className="absolute right-3.5 bottom-2.5 text-slate-400">
+              <Search className="w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Genre select */}
+          <div className="md:col-span-3">
+            <RetroInput
+              id="genre"
+              type="select"
+              value={genre}
+              onChange={(e) => setGenre(e.target.value)}
+              options={[
+                { value: 'all', label: t.storeGenreAll },
+                ...genres.filter(g => g !== 'all').map((g) => ({
+                  value: g.toLowerCase(),
+                  label: g.toUpperCase()
+                }))
+              ]}
+            />
+          </div>
+
+          {/* Sort select */}
+          <div className="md:col-span-3">
+            <RetroInput
+              id="sort"
+              type="select"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              options={[
+                { value: 'rating', label: t.storeSortRating },
+                { value: 'title-asc', label: t.storeSortPriceAsc },
+                { value: 'title-desc', label: t.storeSortPriceDesc },
+                { value: 'year', label: t.storeSortYear }
+              ]}
+            />
+          </div>
+
+        </div>
+
+        {/* Games Catalog Grid */}
+        {filteredGames.length === 0 ? (
+          <div className="py-20 text-center border-4 border-dashed border-slate-300 dark:border-slate-800 p-8">
+            <div className="font-press text-sm text-slate-500 uppercase">
+              NO GAMES DETECTED IN ARCHIVE
+            </div>
+            <p className="font-inter text-xs text-slate-400 mt-2">
+              Try adjusting your filters or search inputs.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredGames.map((game) => {
+              const title = game.title[lang] || game.title['en'];
+              const description = game.description[lang] || game.description['en'];
+
+              return (
+                <RetroCard
+                  key={game.id}
+                  variant="default"
+                  hoverEffect
+                  className="flex flex-col justify-between h-full bg-white dark:bg-slate-950"
+                >
+                  <div>
+                    {/* Thumbnail */}
+                    <div className="relative border-4 border-slate-950 dark:border-slate-100 bg-slate-900 aspect-video overflow-hidden mb-4">
+                      <img
+                        src={game.image}
+                        alt={title}
+                        className="w-full h-full object-cover transition-transform duration-350 hover:scale-105"
+                      />
+                      {/* Genre badge */}
+                      <span className="absolute top-2 left-2 px-2 py-0.5 border-2 border-slate-950 dark:border-slate-100 bg-purple-600 text-white font-press text-[7px] uppercase shadow-retro-sm">
+                        {game.genre}
+                      </span>
+                    </div>
+
+                    {/* Meta info */}
+                    <div className="text-left mb-6">
+                      <div className="flex justify-between items-start mb-2 gap-2">
+                        <h3 className="font-press text-[10px] md:text-[11px] uppercase tracking-wide leading-relaxed truncate max-w-[80%] text-slate-900 dark:text-slate-100">
+                          {title}
+                        </h3>
+                        <span className="font-press text-[9px] text-yellow-500 flex items-center gap-1 select-none whitespace-nowrap">
+                          <Star className="w-3.5 h-3.5 fill-current" />
+                          {game.rating}
+                        </span>
+                      </div>
+                      
+                      <p className="font-inter text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed mt-1">
+                        {description}
+                      </p>
+
+                      <div className="flex items-center justify-between mt-5 pt-3 border-t-2 border-slate-100 dark:border-slate-900">
+                        <span className="font-press text-[8px] border-2 border-slate-950 dark:border-slate-100 px-2 py-0.5 bg-emerald-500 text-slate-950 font-bold shadow-retro-sm">
+                          {t.storePriceFree}
+                        </span>
+                        <span className="font-press text-[8px] text-slate-400">
+                          {game.releaseYear}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Play Button */}
+                  <RetroButton
+                    variant="purple"
+                    fullWidth
+                    size="sm"
+                    onMouseEnter={playHover}
+                    onClick={() => handleLaunchGame(title)}
+                  >
+                    <span className="flex items-center justify-center gap-1.5">
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      {t.storePlayNow}
+                    </span>
+                  </RetroButton>
+                </RetroCard>
+              );
+            })}
+          </div>
+        )}
+
+      </div>
+    </section>
+  );
+}

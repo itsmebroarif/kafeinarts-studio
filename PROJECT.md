@@ -10,7 +10,7 @@ Act as an expert Senior Frontend Developer and UI/UX Designer. I want you to bui
 - **Alerts/Modals:** SweetAlert2 (sweetalert2)
 - **State Management:** Zustand (with persist middleware)
 - **Icons:** Lucide React
-- **PWA:** next-pwa (or @ducanh2912/next-pwa)
+- **PWA:** Electron.js or anything what will get pwa launcher with splash screen 
 - **Utilities:** clsx, tailwind-merge, Language pack (Indonesia, English, Japanese)
 
 ## 🎨 Design System & Theme
