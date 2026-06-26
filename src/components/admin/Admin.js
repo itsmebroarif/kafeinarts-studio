@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Plus, Trash2, KeyRound, Settings, LayoutGrid, CheckCircle, Users, Mail, MessageSquare, Video, Upload } from 'lucide-react';
+import { ShieldCheck, Plus, Trash2, Edit2, KeyRound, Settings, LayoutGrid, CheckCircle, Users, Mail, MessageSquare, Video, Upload } from 'lucide-react';
 import Swal from 'sweetalert2';
 import { useAdminStore, useLangStore } from '../../lib/store';
 import { playHover, playClick, playSuccess, playFail } from '../../lib/sfx';
@@ -45,12 +45,15 @@ export default function Admin() {
     descId: '',
     descJp: '',
     price: 0,
-    genre: 'RPG / Adventure',
-    rating: 4.5,
+    genre: '',
+    rating: 5,
     releaseYear: new Date().getFullYear(),
     image: '',
-    featured: false
+    featured: false,
+    playUrl: ''
   });
+
+  const [editingGameId, setEditingGameId] = useState(null);
 
   // Selected Image File for upload
   const [imageFile, setImageFile] = useState(null);
@@ -183,7 +186,7 @@ export default function Admin() {
       playClick();
       setImageFile(file);
       setImageFileName(file.name);
-      
+
       // Auto-set the preview path
       setNewGame(prev => ({
         ...prev,
@@ -192,10 +195,10 @@ export default function Admin() {
     }
   };
 
-  const handleAddGame = (e) => {
+  const handleSaveGame = (e) => {
     e.preventDefault();
     playClick();
-    
+
     if (!newGame.titleEn || !newGame.descEn) {
       playFail();
       Swal.fire({
@@ -218,32 +221,74 @@ export default function Admin() {
       return;
     }
 
-    const gameId = `game-${Date.now()}`;
-    const gameToAdd = {
-      id: gameId,
-      title: {
-        en: newGame.titleEn,
-        id: newGame.titleId || newGame.titleEn,
-        jp: newGame.titleJp || newGame.titleEn
-      },
-      description: {
-        en: newGame.descEn,
-        id: newGame.descId || newGame.descEn,
-        jp: newGame.descJp || newGame.descEn
-      },
-      price: Number(newGame.price) || 0,
-      genre: newGame.genre,
-      rating: Number(newGame.rating) || 4.5,
-      releaseYear: Number(newGame.releaseYear) || new Date().getFullYear(),
-      image: newGame.image,
-      featured: newGame.featured,
-      // Store the file blob for push if it is a local upload
-      _file: imageFile,
-      _fileName: imageFileName
-    };
+    if (editingGameId) {
+      // Edit mode: Update existing game in the list
+      const updatedGames = games.map((game) => {
+        if (game.id === editingGameId) {
+          return {
+            ...game,
+            title: {
+              en: newGame.titleEn,
+              id: newGame.titleId || newGame.titleEn,
+              jp: newGame.titleJp || newGame.titleEn
+            },
+            description: {
+              en: newGame.descEn,
+              id: newGame.descId || newGame.descEn,
+              jp: newGame.descJp || newGame.descEn
+            },
+            price: Number(newGame.price) || 0,
+            genre: newGame.genre,
+            rating: Number(newGame.rating) || 4.5,
+            releaseYear: Number(newGame.releaseYear) || new Date().getFullYear(),
+            image: newGame.image,
+            featured: newGame.featured,
+            playUrl: newGame.playUrl,
+            // If new image was uploaded, preserve it for upload step
+            ...(imageFile ? { _file: imageFile, _fileName: imageFileName } : {})
+          };
+        }
+        return game;
+      });
 
-    setGames([...games, gameToAdd]);
-    playSuccess();
+      setGames(updatedGames);
+      setEditingGameId(null);
+      playSuccess();
+      Swal.fire({
+        title: 'Success',
+        text: 'Game record updated locally. Don\'t forget to click "COMMIT & PUSH TO GITHUB" to save changes permanently.',
+        icon: 'success',
+        confirmButtonColor: '#9333ea',
+      });
+    } else {
+      // Add mode: Create new game record
+      const gameId = `game-${Date.now()}`;
+      const gameToAdd = {
+        id: gameId,
+        title: {
+          en: newGame.titleEn,
+          id: newGame.titleId || newGame.titleEn,
+          jp: newGame.titleJp || newGame.titleEn
+        },
+        description: {
+          en: newGame.descEn,
+          id: newGame.descId || newGame.descEn,
+          jp: newGame.descJp || newGame.descEn
+        },
+        price: Number(newGame.price) || 0,
+        genre: newGame.genre,
+        rating: Number(newGame.rating) || 4.5,
+        releaseYear: Number(newGame.releaseYear) || new Date().getFullYear(),
+        image: newGame.image,
+        featured: newGame.featured,
+        playUrl: newGame.playUrl,
+        _file: imageFile,
+        _fileName: imageFileName
+      };
+
+      setGames([...games, gameToAdd]);
+      playSuccess();
+    }
 
     // Reset Form & File Selection
     setNewGame({
@@ -259,7 +304,57 @@ export default function Admin() {
       rating: 4.5,
       releaseYear: new Date().getFullYear(),
       image: '',
-      featured: false
+      featured: false,
+      playUrl: ''
+    });
+    setImageFile(null);
+    setImageFileName('');
+  };
+
+  const handleEditGame = (game) => {
+    playClick();
+    setEditingGameId(game.id);
+    setNewGame({
+      id: game.id,
+      titleEn: game.title.en,
+      titleId: game.title.id || '',
+      titleJp: game.title.jp || '',
+      descEn: game.description.en,
+      descId: game.description.id || '',
+      descJp: game.description.jp || '',
+      price: game.price || 0,
+      genre: game.genre || '',
+      rating: game.rating || 5,
+      releaseYear: game.releaseYear || new Date().getFullYear(),
+      image: game.image || '',
+      featured: game.featured || false,
+      playUrl: game.playUrl || ''
+    });
+    // Scroll to form smoothly
+    const formEl = document.getElementById('game-form');
+    if (formEl) {
+      formEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    playClick();
+    setEditingGameId(null);
+    setNewGame({
+      id: '',
+      titleEn: '',
+      titleId: '',
+      titleJp: '',
+      descEn: '',
+      descId: '',
+      descJp: '',
+      price: 0,
+      genre: 'RPG / Adventure',
+      rating: 4.5,
+      releaseYear: new Date().getFullYear(),
+      image: '',
+      featured: false,
+      playUrl: ''
     });
     setImageFile(null);
     setImageFileName('');
@@ -331,7 +426,7 @@ export default function Admin() {
         const fileContentBase64 = await fileToBase64(game._file);
         const imagePath = `public/images/games/${game._fileName}`;
         const imageApiUrl = `https://api.github.com/repos/${githubOwner}/${githubRepo}/contents/${imagePath}`;
-        
+
         // Check if image already exists to get SHA
         const checkRes = await fetch(imageApiUrl + `?ref=${githubBranch}`, {
           headers: {
@@ -428,7 +523,7 @@ export default function Admin() {
       }
 
       playSuccess();
-      
+
       // Update local state to show uploads are done
       setGames(gamesClean);
 
@@ -593,7 +688,7 @@ export default function Admin() {
   return (
     <div className="py-6 px-4 md:px-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto flex flex-col gap-6 font-inter">
-        
+
         {/* Top Control Bar */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-4 border-slate-950 dark:border-slate-100 bg-purple-600 text-white p-4 shadow-retro">
           <div className="flex items-center gap-3">
@@ -615,10 +710,10 @@ export default function Admin() {
 
         {/* Sidebar + Workspace layout */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
-          
+
           {/* Admin Sidebar Navigation Panel */}
           <div className="md:col-span-3 flex flex-col gap-4">
-            
+
             {/* Sync Summary Widget */}
             <RetroCard variant="cyan" title="GIT_STATUS">
               <div className="flex flex-col gap-3.5 text-left font-mono text-[9px] leading-relaxed">
@@ -645,9 +740,8 @@ export default function Admin() {
                 <button
                   onClick={() => { playClick(); setActiveTab('games'); }}
                   onMouseEnter={playHover}
-                  className={`flex-1 md:w-full text-left p-3 border-2 border-slate-950 dark:border-slate-100 font-press text-[9px] uppercase shadow-retro-sm flex items-center gap-2 whitespace-nowrap ${
-                    activeTab === 'games' ? 'bg-purple-600 text-white' : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
+                  className={`flex-1 md:w-full text-left p-3 border-2 border-slate-950 dark:border-slate-100 font-press text-[9px] uppercase shadow-retro-sm flex items-center gap-2 whitespace-nowrap ${activeTab === 'games' ? 'bg-purple-600 text-white' : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
                 >
                   <LayoutGrid className="w-4 h-4" />
                   Games
@@ -655,9 +749,8 @@ export default function Admin() {
                 <button
                   onClick={() => { playClick(); setActiveTab('collaborators'); }}
                   onMouseEnter={playHover}
-                  className={`flex-1 md:w-full text-left p-3 border-2 border-slate-950 dark:border-slate-100 font-press text-[9px] uppercase shadow-retro-sm flex items-center gap-2 whitespace-nowrap ${
-                    activeTab === 'collaborators' ? 'bg-purple-600 text-white' : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
+                  className={`flex-1 md:w-full text-left p-3 border-2 border-slate-950 dark:border-slate-100 font-press text-[9px] uppercase shadow-retro-sm flex items-center gap-2 whitespace-nowrap ${activeTab === 'collaborators' ? 'bg-purple-600 text-white' : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
                 >
                   <Users className="w-4 h-4" />
                   Collaborators
@@ -665,9 +758,8 @@ export default function Admin() {
                 <button
                   onClick={() => { playClick(); setActiveTab('config'); }}
                   onMouseEnter={playHover}
-                  className={`flex-1 md:w-full text-left p-3 border-2 border-slate-950 dark:border-slate-100 font-press text-[9px] uppercase shadow-retro-sm flex items-center gap-2 whitespace-nowrap ${
-                    activeTab === 'config' ? 'bg-purple-600 text-white' : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
-                  }`}
+                  className={`flex-1 md:w-full text-left p-3 border-2 border-slate-950 dark:border-slate-100 font-press text-[9px] uppercase shadow-retro-sm flex items-center gap-2 whitespace-nowrap ${activeTab === 'config' ? 'bg-purple-600 text-white' : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    }`}
                 >
                   <Settings className="w-4 h-4" />
                   Settings
@@ -679,15 +771,15 @@ export default function Admin() {
 
           {/* Main Panel Content */}
           <div className="md:col-span-9 flex flex-col gap-6">
-            
+
             {/* T1: GAMES MANAGER TAB */}
             {activeTab === 'games' && (
               <div className="flex flex-col gap-6">
-                
+
                 {/* Form: Add Game Wizard */}
-                <RetroCard variant="default" title="GAME_CREATOR_WIZARD">
-                  <form onSubmit={handleAddGame} className="flex flex-col gap-4 text-left">
-                    
+                <RetroCard variant="default" title={editingGameId ? "EDIT_GAME_RECORD" : "GAME_CREATOR_WIZARD"} id="game-form">
+                  <form onSubmit={handleSaveGame} className="flex flex-col gap-4 text-left">
+
                     {/* Multilang Titles */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <RetroInput
@@ -756,7 +848,7 @@ export default function Admin() {
                         value={newGame.releaseYear}
                         onChange={(e) => setNewGame({ ...newGame, releaseYear: e.target.value })}
                       />
-                      
+
                       <div className="flex flex-col gap-1.5 justify-center">
                         <label className="font-press text-[9px] uppercase tracking-wider text-slate-700 dark:text-slate-300">
                           Featured Status
@@ -764,13 +856,23 @@ export default function Admin() {
                         <button
                           type="button"
                           onClick={() => setNewGame({ ...newGame, featured: !newGame.featured })}
-                          className={`px-3 py-2 border-2 border-slate-950 dark:border-slate-100 font-press text-[8px] uppercase select-none ${
-                            newGame.featured ? 'bg-purple-600 text-white shadow-retro-sm' : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-2'
-                          }`}
+                          className={`px-3 py-2 border-2 border-slate-950 dark:border-slate-100 font-press text-[8px] uppercase select-none ${newGame.featured ? 'bg-purple-600 text-white shadow-retro-sm' : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-200 border-2'
+                            }`}
                         >
                           {newGame.featured ? 'FEATURED' : 'REGULAR'}
                         </button>
                       </div>
+                    </div>
+
+                    {/* Game Play/Download URL Input */}
+                    <div className="w-full">
+                      <RetroInput
+                        id="playUrl"
+                        label="Game Play / Download URL (Roblox, itch.io, etc.)"
+                        value={newGame.playUrl}
+                        onChange={(e) => setNewGame({ ...newGame, playUrl: e.target.value })}
+                        placeholder="e.g., https://www.roblox.com/games/123456 or https://kafeinarts.itch.io/game"
+                      />
                     </div>
 
                     {/* Image File Uploader */}
@@ -782,11 +884,11 @@ export default function Admin() {
                         <label className="cursor-pointer px-4 py-2.5 border-2 border-slate-955 border-slate-950 dark:border-slate-100 font-press text-[9px] uppercase bg-slate-100 dark:bg-slate-900 shadow-retro-sm active:translate-y-[1px] hover:bg-slate-200 flex items-center gap-1.5">
                           <Upload className="w-4 h-4" />
                           SELECT IMAGE FILE
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            onChange={handleImageFileChange} 
-                            className="hidden" 
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageFileChange}
+                            className="hidden"
                           />
                         </label>
                         <span className="font-mono text-xs text-slate-500 truncate max-w-sm">
@@ -795,10 +897,15 @@ export default function Admin() {
                       </div>
                     </div>
 
-                    <div className="mt-4 flex justify-end">
+                    <div className="mt-4 flex justify-end gap-3">
+                      {editingGameId && (
+                        <RetroButton type="button" variant="gray" onClick={handleCancelEdit}>
+                          CANCEL EDIT
+                        </RetroButton>
+                      )}
                       <RetroButton type="submit" variant="purple" className="flex items-center gap-2">
                         <Plus className="w-4.5 h-4.5" />
-                        ADD GAME RECORD
+                        {editingGameId ? "UPDATE GAME RECORD" : "ADD GAME RECORD"}
                       </RetroButton>
                     </div>
                   </form>
@@ -810,7 +917,7 @@ export default function Admin() {
                     {games.map((game) => {
                       const title = game.title[lang] || game.title['en'];
                       return (
-                        <div 
+                        <div
                           key={game.id}
                           className="flex items-center justify-between p-3 border-2 border-slate-955 border-slate-950 dark:border-slate-100 bg-white dark:bg-slate-950 shadow-retro-sm"
                         >
@@ -825,18 +932,30 @@ export default function Admin() {
                                 {title} {game.featured && <span className="text-[7px] text-purple-600 bg-purple-100 dark:bg-purple-900/40 px-1 border border-purple-650 ml-1">featured</span>}
                               </h4>
                               <span className="font-mono text-[9px] text-slate-500 block">
-                                Genre: {game.genre} | Year: {game.releaseYear} | Path: {game.image}
+                                Genre: {game.genre} | Year: {game.releaseYear} | Path: {game.image} | URL: <a href={game.playUrl} target="_blank" rel="noopener noreferrer" className="underline text-purple-600 dark:text-cyan-400">{game.playUrl || 'None'}</a>
                               </span>
                             </div>
                           </div>
 
-                          <button
-                            onClick={() => handleDeleteGame(game.id)}
-                            className="p-2 border-2 border-slate-950 dark:border-slate-100 bg-rose-50 dark:bg-rose-950/20 text-rose-500 hover:bg-rose-500 hover:text-white shadow-retro-sm transition-colors duration-150"
-                            aria-label="Delete Game"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleEditGame(game)}
+                              className="p-2 border-2 border-slate-950 dark:border-slate-100 bg-amber-50 dark:bg-amber-950/20 text-amber-600 hover:bg-amber-500 hover:text-white shadow-retro-sm transition-colors duration-150"
+                              aria-label="Edit Game"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteGame(game.id)}
+                              className="p-2 border-2 border-slate-950 dark:border-slate-100 bg-rose-50 dark:bg-rose-950/20 text-rose-500 hover:bg-rose-500 hover:text-white shadow-retro-sm transition-colors duration-150"
+                              aria-label="Delete Game"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       );
                     })}
@@ -870,8 +989,8 @@ export default function Admin() {
                   ) : (
                     <div className="flex flex-col gap-4">
                       {collaborators.map((collab) => (
-                        <div 
-                          key={collab.id} 
+                        <div
+                          key={collab.id}
                           className="p-4 border-2 border-slate-950 dark:border-slate-100 bg-white dark:bg-slate-950 shadow-retro-sm flex flex-col gap-3"
                         >
                           {/* Info Header */}

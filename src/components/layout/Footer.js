@@ -8,16 +8,16 @@ export default function Footer() {
   const t = locales[lang];
 
   return (
-    <footer className="bg-slate-950 text-slate-350 border-t-4 border-slate-950 dark:border-slate-100 py-10 px-4 md:px-8 transition-colors duration-200">
+    <footer className="bg-slate-950 text-slate-350 border-t-4 border-slate-950 dark:border-slate-100 pt-10 pb-28 lg:pb-10 px-4 md:px-8 transition-colors duration-200">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
         
         {/* Logo and Tagline */}
         <div className="flex flex-col items-center md:items-start text-center md:text-left gap-2">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-purple-600 border border-slate-100 flex items-center justify-center font-press text-white text-xs">
+            <div className="w-6 h-6 bg-purple-600 border border-slate-100 flex items-center justify-center font-undertale text-white text-xs">
               K
             </div>
-            <span className="font-press text-[10px] tracking-tight text-white">
+            <span className="font-undertale text-xs tracking-widest text-white font-bold">
               KAFEINARTS
             </span>
           </div>

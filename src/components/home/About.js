@@ -2,16 +2,51 @@ import React from 'react';
 import { useLangStore } from '../../lib/store';
 import { locales } from '../../data/locales';
 import RetroCard from '../ui/RetroCard';
+import gamesData from '../../data/games.json';
 
 export default function About() {
   const { lang } = useLangStore();
   const t = locales[lang];
 
+  const totalGames = gamesData.length;
+  const avgRating = totalGames > 0 
+    ? (gamesData.reduce((acc, g) => acc + g.rating, 0) / totalGames).toFixed(1) 
+    : "0.0";
+  const genresCount = totalGames > 0
+    ? new Set(gamesData.map(g => g.genre.split(' / ')[0])).size
+    : 0;
+  const premiumGames = totalGames > 0
+    ? gamesData.filter(g => g.price > 0).length
+    : 0;
+
+  const statLabels = {
+    en: {
+      games: "Active Games",
+      rating: "Avg User Rating",
+      genres: "Genre Count",
+      premium: "Premium Titles"
+    },
+    id: {
+      games: "Game Aktif",
+      rating: "Rata-Rata Rating",
+      genres: "Jumlah Genre",
+      premium: "Judul Berbayar"
+    },
+    jp: {
+      games: "アクティブゲーム",
+      rating: "平均評価",
+      genres: "ジャンル数",
+      premium: "有料タイトル"
+    }
+  };
+
+  const currentLabels = statLabels[lang] || statLabels['en'];
+
   const stats = [
-    { label: t.statGamesReleased, value: "16" },
-    { label: t.statClientsServed, value: "88+" },
-    { label: t.statLineOfCode, value: "99K+" },
-    { label: t.statCoffeeDrunk, value: "1.02K" }
+    { label: currentLabels.games, value: String(totalGames) },
+    { label: currentLabels.rating, value: avgRating + " / 5.0" },
+    { label: currentLabels.genres, value: String(genresCount) },
+    { label: currentLabels.premium, value: String(premiumGames) }
   ];
 
   return (
@@ -25,48 +60,18 @@ export default function About() {
           </h2>
         </div>
 
-        {/* Content Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          
-          {/* Left: Text details */}
-          <div className="lg:col-span-7 flex flex-col gap-4 text-left">
-            <p className="font-inter text-sm md:text-base text-slate-700 dark:text-slate-355 leading-relaxed">
-              {t.aboutText1}
-            </p>
-            <p className="font-inter text-sm md:text-base text-slate-750 dark:text-slate-360 leading-relaxed">
-              {t.aboutText2}
-            </p>
-          </div>
-
-          {/* Right: Retro Stats Counter Grid */}
-          <div className="lg:col-span-5 w-full">
-            <RetroCard 
-              variant="default" 
-              title="SYSTEM_DIAGNOSTICS"
-              className="bg-slate-50 dark:bg-slate-900"
-            >
-              <div className="grid grid-cols-2 gap-4">
-                {stats.map((stat, idx) => (
-                  <div 
-                    key={idx} 
-                    className="p-3 border-2 border-slate-950 dark:border-slate-100 bg-white dark:bg-slate-950 flex flex-col items-center justify-center text-center shadow-retro-sm"
-                  >
-                    <span className="font-press text-sm md:text-base text-purple-600 dark:text-cyan-400 font-bold mb-1">
-                      {stat.value}
-                    </span>
-                    <span className="font-press text-[7px] uppercase tracking-tighter text-slate-500 dark:text-slate-400">
-                      {stat.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </RetroCard>
-          </div>
-
+        {/* Content Layout: Text details */}
+        <div className="flex flex-col gap-6 text-left max-w-4xl mx-auto">
+          <p className="text-[9px] md:text-[10px] text-slate-700 dark:text-slate-355 leading-relaxed text-justify">
+            {t.aboutText1}
+          </p>
+          <p className="text-[9px] md:text-[10px] text-slate-750 dark:text-slate-360 leading-relaxed text-justify">
+            {t.aboutText2}
+          </p>
         </div>
 
         {/* Founder Card */}
-        <div className="mt-8 p-6 border-4 border-slate-950 dark:border-slate-100 bg-white dark:bg-slate-950 shadow-retro flex flex-col md:flex-row items-center gap-6">
+        <div className="mt-12 p-6 border-4 border-slate-950 dark:border-slate-100 bg-white dark:bg-slate-950 shadow-retro flex flex-col md:flex-row items-center gap-6 max-w-4xl mx-auto">
           {/* Retro futuristic pixel-art style frame (Blue, Red, Green) */}
           <div className="relative p-1 bg-slate-950 dark:bg-slate-100 border-4 border-slate-950 dark:border-slate-100 shadow-[4px_4px_0_#ef4444,-4px_-4px_0_#3b82f6,0_0_0_4px_#22c55e] flex-shrink-0 mx-2 my-2">
             <img 
@@ -82,15 +87,40 @@ export default function About() {
             <h3 className="font-press text-sm uppercase text-slate-900 dark:text-slate-100 mb-2">
               Arif Alexander
             </h3>
-            <p className="font-inter text-xs md:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+            <p className="text-[9px] md:text-[10px] text-slate-700 dark:text-slate-300 leading-relaxed text-justify">
               {lang === 'id' ? 
                 'KafeinArts Studio didirikan dan dimiliki sepenuhnya oleh Arif Alexander. Sebagai pengembang utama dan arsitek teknis, beliau memimpin visi kreatif untuk menghadirkan game retro 16-bit berkelas dunia dan arsitektur web modern yang andal dan berdaya saing tinggi.' : 
                 lang === 'jp' ?
-                'KafeinArts Studioはアリフ・アレクサンダーによって設立され、完全所有されています。リード開発者およびテクニカルアーキテクトとして、彼は世界クラスの16ビットレトロゲームと信頼性の高い最新のウェブシステムを提供する創造的なビジョンを指揮しています。' :
+                'KafeinArts Studioはアリフ・アレクサンダーによって設立され、完全所有されています。リード開発者およびテクニカルアーキテクトとして、彼は世界クラス of 16ビットレトロゲームと信頼性の高的最新のウェブシステムを提供する創造的なビジョンを指揮しています。' :
                 'KafeinArts Studio was founded and is fully owned by Arif Alexander. Serving as the principal developer and technical architect, he directs the creative vision of delivering world-class 16-bit retro games and robust modern web architectures.'
               }
             </p>
           </div>
+        </div>
+
+        {/* SYSTEM_DIAGNOSTICS - Placed at the very bottom, full width inside max-w-4xl */}
+        <div className="mt-12 max-w-4xl mx-auto w-full">
+          <RetroCard 
+            variant="default" 
+            title="SYSTEM_DIAGNOSTICS"
+            className="bg-slate-50 dark:bg-slate-900"
+          >
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {stats.map((stat, idx) => (
+                <div 
+                  key={idx} 
+                  className="p-3 border-2 border-slate-950 dark:border-slate-100 bg-white dark:bg-slate-950 flex flex-col items-center justify-center text-center shadow-retro-sm"
+                >
+                  <span className="font-press text-[10px] md:text-xs text-purple-600 dark:text-cyan-400 font-bold mb-1">
+                    {stat.value}
+                  </span>
+                  <span className="font-press text-[7px] uppercase tracking-tighter text-slate-500 dark:text-slate-400">
+                    {stat.label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </RetroCard>
         </div>
 
       </div>

@@ -136,7 +136,7 @@ function App() {
       <Navbar />
 
       {/* Main Content Area */}
-      <main className="flex-1 w-full max-w-7xl mx-auto pb-10">
+      <main className="flex-1 w-full max-w-7xl mx-auto pb-24 lg:pb-10">
         <AnimatePresence mode="wait">{renderPage()}</AnimatePresence>
       </main>
 

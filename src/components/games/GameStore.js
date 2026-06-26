@@ -54,7 +54,7 @@ export default function GameStore() {
       });
   }, [search, genre, sortBy, lang]);
 
-  const handleLaunchGame = (gameTitle) => {
+  const handleLaunchGame = (gameTitle, playUrl) => {
     playSuccess();
     
     Swal.fire({
@@ -69,8 +69,8 @@ export default function GameStore() {
         popup: 'border-4 border-slate-950 font-inter text-sm rounded-none',
       }
     }).then(() => {
-      // Mock opening game target url
-      window.open('https://itch.io', '_blank');
+      const targetUrl = playUrl || 'https://itch.io';
+      window.open(targetUrl, '_blank');
     });
   };
 
@@ -210,7 +210,7 @@ export default function GameStore() {
                     fullWidth
                     size="sm"
                     onMouseEnter={playHover}
-                    onClick={() => handleLaunchGame(title)}
+                    onClick={() => handleLaunchGame(title, game.playUrl)}
                   >
                     <span className="flex items-center justify-center gap-1.5">
                       <Play className="w-3.5 h-3.5 fill-current" />
