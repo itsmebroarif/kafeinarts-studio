@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Star, Play } from 'lucide-react';
 import { useLangStore, useNavStore } from '../../lib/store';
 import { locales } from '../../data/locales';
@@ -7,11 +7,14 @@ import RetroCard from '../ui/RetroCard';
 import RetroButton from '../ui/RetroButton';
 import { playHover, playClick, playSuccess } from '../../lib/sfx';
 import Swal from 'sweetalert2';
+import GameDetailsModal from '../games/GameDetailsModal';
 
 export default function FeaturedGames() {
   const { lang } = useLangStore();
   const { setPage } = useNavStore();
   const t = locales[lang];
+  
+  const [selectedGameForDetails, setSelectedGameForDetails] = useState(null);
 
   // Get featured games
   const featuredGames = gamesData.filter((game) => game.featured);
@@ -93,6 +96,20 @@ export default function FeaturedGames() {
                     <p className="font-inter text-xs text-slate-650 dark:text-slate-400 line-clamp-3 leading-relaxed mt-1">
                       {description}
                     </p>
+                    
+                    <div className="mt-2 text-left">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          playClick();
+                          setSelectedGameForDetails(game);
+                        }}
+                        onMouseEnter={playHover}
+                        className="text-[9px] font-press text-purple-650 dark:text-cyan-400 hover:underline transition-colors cursor-pointer focus:outline-none"
+                      >
+                        [ {t.storeViewDetails} ]
+                      </button>
+                    </div>
                   </div>
 
                   <div className="flex items-center justify-between mt-5 pt-3 border-t-2 border-slate-100 dark:border-slate-900">
@@ -137,6 +154,15 @@ export default function FeaturedGames() {
             {t.viewAllGames}
           </RetroButton>
         </div>
+        
+        {selectedGameForDetails && (
+          <GameDetailsModal
+            game={selectedGameForDetails}
+            onClose={() => setSelectedGameForDetails(null)}
+            onPlay={handleLaunchGame}
+            lang={lang}
+          />
+        )}
 
       </div>
     </section>

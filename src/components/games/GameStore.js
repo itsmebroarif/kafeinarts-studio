@@ -6,8 +6,9 @@ import gamesData from '../../data/games.json';
 import RetroCard from '../ui/RetroCard';
 import RetroButton from '../ui/RetroButton';
 import RetroInput from '../ui/RetroInput';
-import { playHover, playSuccess } from '../../lib/sfx';
+import { playHover, playSuccess, playClick } from '../../lib/sfx';
 import Swal from 'sweetalert2';
+import GameDetailsModal from './GameDetailsModal';
 
 export default function GameStore() {
   const { lang } = useLangStore();
@@ -17,6 +18,7 @@ export default function GameStore() {
   const [search, setSearch] = useState('');
   const [genre, setGenre] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
+  const [selectedGameForDetails, setSelectedGameForDetails] = useState(null);
 
   // Parse genres dynamically
   const genres = useMemo(() => {
@@ -192,6 +194,20 @@ export default function GameStore() {
                       <p className="font-inter text-xs text-slate-600 dark:text-slate-400 line-clamp-3 leading-relaxed mt-1">
                         {description}
                       </p>
+                      
+                      <div className="mt-2 text-left">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClick();
+                            setSelectedGameForDetails(game);
+                          }}
+                          onMouseEnter={playHover}
+                          className="text-[9px] font-press text-purple-650 dark:text-cyan-400 hover:underline transition-colors cursor-pointer focus:outline-none"
+                        >
+                          [ {t.storeViewDetails} ]
+                        </button>
+                      </div>
 
                       <div className="flex items-center justify-between mt-5 pt-3 border-t-2 border-slate-100 dark:border-slate-900">
                         <span className="font-press text-[8px] border-2 border-slate-950 dark:border-slate-100 px-2 py-0.5 bg-emerald-500 text-slate-950 font-bold shadow-retro-sm">
@@ -221,6 +237,15 @@ export default function GameStore() {
               );
             })}
           </div>
+        )}
+        
+        {selectedGameForDetails && (
+          <GameDetailsModal
+            game={selectedGameForDetails}
+            onClose={() => setSelectedGameForDetails(null)}
+            onPlay={handleLaunchGame}
+            lang={lang}
+          />
         )}
 
       </div>

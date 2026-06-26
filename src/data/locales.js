@@ -74,6 +74,11 @@ export const locales = {
     storeSortYear: "Release Year",
     storePlayNow: "PLAY GAME",
     storePriceFree: "FREE",
+    storeViewDetails: "Check Details",
+    modalClose: "Close",
+    gameYear: "Release Year",
+    gameGenre: "Genre",
+    gameRating: "Rating",
 
     // Contact
     contactTitle: "ESTABLISH CONTACT",
@@ -199,6 +204,11 @@ export const locales = {
     storeSortYear: "Tahun Rilis",
     storePlayNow: "MAINKAN GAME",
     storePriceFree: "GRATIS",
+    storeViewDetails: "Cek Detail",
+    modalClose: "Tutup",
+    gameYear: "Tahun Rilis",
+    gameGenre: "Genre",
+    gameRating: "Rating",
 
     // Contact
     contactTitle: "HUBUNGI KAMI",
@@ -324,6 +334,11 @@ export const locales = {
     storeSortYear: "リリース年",
     storePlayNow: "ゲームをプレイ",
     storePriceFree: "無料",
+    storeViewDetails: "詳細を見る",
+    modalClose: "閉じる",
+    gameYear: "リリース年",
+    gameGenre: "ジャンル",
+    gameRating: "評価",
 
     // Contact
     contactTitle: "コンタクトを確立する",
