@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Star, Search, Play } from 'lucide-react';
+import { Star, Search, Play, LayoutGrid, List } from 'lucide-react';
 import { useLangStore } from '../../lib/store';
 import { locales } from '../../data/locales';
 import gamesData from '../../data/games.json';
@@ -19,6 +19,8 @@ export default function GameStore() {
   const [genre, setGenre] = useState('all');
   const [sortBy, setSortBy] = useState('rating');
   const [selectedGameForDetails, setSelectedGameForDetails] = useState(null);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+  const [expandedGameId, setExpandedGameId] = useState(null);
 
   // Parse genres dynamically
   const genres = useMemo(() => {
@@ -94,7 +96,7 @@ export default function GameStore() {
         <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-8">
           
           {/* Search box */}
-          <div className="md:col-span-6 relative">
+          <div className="md:col-span-5 relative">
             <RetroInput
               id="search"
               placeholder={t.storeSearchPlaceholder}
@@ -140,6 +142,28 @@ export default function GameStore() {
             />
           </div>
 
+          {/* Layout Toggle */}
+          <div className="md:col-span-1 flex gap-2 items-center justify-end h-full mt-2 md:mt-0">
+            <button
+              type="button"
+              onClick={() => { playClick(); setViewMode('grid'); }}
+              onMouseEnter={playHover}
+              className={`p-2.5 border-2 border-slate-950 dark:border-slate-100 shadow-retro-sm active:translate-x-[1px] active:translate-y-[1px] ${viewMode === 'grid' ? 'bg-purple-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-205'}`}
+              title={t.storeViewGrid}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => { playClick(); setViewMode('list'); }}
+              onMouseEnter={playHover}
+              className={`p-2.5 border-2 border-slate-950 dark:border-slate-100 shadow-retro-sm active:translate-x-[1px] active:translate-y-[1px] ${viewMode === 'list' ? 'bg-purple-600 text-white' : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-205'}`}
+              title={t.storeViewList}
+            >
+              <List className="w-4 h-4" />
+            </button>
+          </div>
+
         </div>
 
         {/* Games Catalog Grid */}
@@ -152,7 +176,7 @@ export default function GameStore() {
               Try adjusting your filters or search inputs.
             </p>
           </div>
-        ) : (
+        ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredGames.map((game) => {
               const title = game.title[lang] || game.title['en'];
@@ -234,6 +258,119 @@ export default function GameStore() {
                     </span>
                   </RetroButton>
                 </RetroCard>
+              );
+            })}
+          </div>
+        ) : (
+          /* Accordion List View */
+          <div className="flex flex-col gap-4">
+            {filteredGames.map((game) => {
+              const title = game.title[lang] || game.title['en'];
+              const description = game.description[lang] || game.description['en'];
+              const isExpanded = expandedGameId === game.id;
+
+              return (
+                <div key={game.id} className="flex flex-col w-full text-left">
+                  {/* Accordion Header */}
+                  <div
+                    onClick={() => {
+                      playClick();
+                      setExpandedGameId(isExpanded ? null : game.id);
+                    }}
+                    onMouseEnter={playHover}
+                    className={`border-4 border-slate-950 dark:border-slate-100 bg-white dark:bg-slate-950 p-4 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors shadow-retro select-none gap-3 ${
+                      isExpanded ? 'border-b-4' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <h3 className="font-press text-[10px] md:text-[11px] uppercase tracking-wide text-slate-900 dark:text-slate-100">
+                        {title}
+                      </h3>
+                      <span className="font-press text-[7px] border-2 border-slate-950 dark:border-slate-100 px-2 py-0.5 bg-purple-600 text-white shadow-retro-sm uppercase">
+                        {game.platform || 'PC'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between sm:justify-end gap-6">
+                      <span className="font-press text-[8px] text-slate-400 dark:text-slate-500 uppercase hidden md:inline">
+                        {game.genre}
+                      </span>
+                      <span className="font-press text-[9px] text-yellow-500 flex items-center gap-1 select-none whitespace-nowrap">
+                        <Star className="w-3.5 h-3.5 fill-current" />
+                        {game.rating}
+                      </span>
+                      <span className="font-press text-[9px] text-slate-900 dark:text-slate-100 font-bold select-none">
+                        {isExpanded ? '[-]' : '[+]'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Accordion Content (Inline Details Panel) */}
+                  {isExpanded && (
+                    <div className="border-4 border-t-0 border-slate-950 dark:border-slate-100 p-5 bg-slate-50 dark:bg-slate-900/50 shadow-retro flex flex-col md:flex-row gap-6 animate-in slide-in-from-top-4 duration-200">
+                      
+                      {/* Media Block (Video / Image) */}
+                      <div className="flex-1 md:max-w-md w-full">
+                        {game.videoUrl ? (
+                          <div className="border-4 border-slate-950 dark:border-slate-100 bg-black overflow-hidden shadow-retro-sm">
+                            <video
+                              src={game.videoUrl}
+                              controls
+                              className="w-full aspect-video object-contain"
+                              playsInline
+                            />
+                          </div>
+                        ) : (
+                          <div className="border-4 border-slate-950 dark:border-slate-100 bg-slate-900 aspect-video overflow-hidden shadow-retro-sm">
+                            <img
+                              src={game.image}
+                              alt={title}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Detail Info Block */}
+                      <div className="flex-1 flex flex-col justify-between text-left">
+                        <div>
+                          {/* Specs Badge list */}
+                          <div className="flex flex-wrap gap-2 mb-3.5">
+                            <span className="font-press text-[7px] border-2 border-slate-950 dark:border-slate-100 px-2 py-0.5 bg-emerald-500 text-slate-950 font-bold shadow-retro-sm">
+                              {t.storePriceFree}
+                            </span>
+                            <span className="font-press text-[7px] border-2 border-slate-950 dark:border-slate-100 px-2 py-0.5 bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-retro-sm">
+                              {game.releaseYear}
+                            </span>
+                            <span className="font-press text-[7px] border-2 border-slate-950 dark:border-slate-100 px-2 py-0.5 bg-cyan-500 text-slate-950 shadow-retro-sm">
+                              {game.genre}
+                            </span>
+                          </div>
+                          <p className="font-inter text-xs md:text-sm text-slate-700 dark:text-slate-300 leading-relaxed text-justify mt-1">
+                            {description}
+                          </p>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="mt-6 flex justify-end">
+                          <RetroButton
+                            variant="purple"
+                            size="sm"
+                            onMouseEnter={playHover}
+                            onClick={() => handleLaunchGame(title, game.playUrl)}
+                            className="w-full sm:w-auto"
+                          >
+                            <span className="flex items-center justify-center gap-1.5">
+                              <Play className="w-3.5 h-3.5 fill-current" />
+                              {t.storePlayNow}
+                            </span>
+                          </RetroButton>
+                        </div>
+                      </div>
+
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

@@ -79,6 +79,9 @@ export const locales = {
     gameYear: "Release Year",
     gameGenre: "Genre",
     gameRating: "Rating",
+    gamePlatform: "Platform",
+    storeViewGrid: "Grid View",
+    storeViewList: "List View",
 
     // Contact
     contactTitle: "ESTABLISH CONTACT",
@@ -209,6 +212,9 @@ export const locales = {
     gameYear: "Tahun Rilis",
     gameGenre: "Genre",
     gameRating: "Rating",
+    gamePlatform: "Platform",
+    storeViewGrid: "Tampilan Grid",
+    storeViewList: "Tampilan List",
 
     // Contact
     contactTitle: "HUBUNGI KAMI",
@@ -339,6 +345,9 @@ export const locales = {
     gameYear: "リリース年",
     gameGenre: "ジャンル",
     gameRating: "評価",
+    gamePlatform: "プラットフォーム",
+    storeViewGrid: "グリッド表示",
+    storeViewList: "リスト表示",
 
     // Contact
     contactTitle: "コンタクトを確立する",

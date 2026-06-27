@@ -50,7 +50,9 @@ export default function Admin() {
     releaseYear: new Date().getFullYear(),
     image: '',
     featured: false,
-    playUrl: ''
+    playUrl: '',
+    videoUrl: '',
+    platform: ''
   });
 
   const [editingGameId, setEditingGameId] = useState(null);
@@ -58,6 +60,19 @@ export default function Admin() {
   // Selected Image File for upload
   const [imageFile, setImageFile] = useState(null);
   const [imageFileName, setImageFileName] = useState('');
+
+  // Selected Video File for upload
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoFileName, setVideoFileName] = useState('');
+
+  // Selected platforms check status
+  const [selectedPlatforms, setSelectedPlatforms] = useState({
+    PC: false,
+    Console: false,
+    Android: false,
+    iOS: false,
+    Roblox: false
+  });
 
   // Github form configs
   const [gitConfig, setGitConfig] = useState({
@@ -195,6 +210,41 @@ export default function Admin() {
     }
   };
 
+  // Video Selection Handler
+  const handleVideoFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // 200MB size limit check
+      const maxSize = 200 * 1024 * 1024;
+      if (file.size > maxSize) {
+        playFail();
+        Swal.fire({
+          title: 'File Too Large',
+          text: `Video file size exceeds the 200MB limit (Selected: ${(file.size / (1024 * 1024)).toFixed(1)}MB).`,
+          icon: 'error',
+          confirmButtonColor: '#e11d48',
+          background: document.documentElement.classList.contains('dark') ? '#0f172a' : '#ffffff',
+          color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#0f172a',
+          customClass: {
+            popup: 'border-4 border-slate-950 font-inter text-sm rounded-none',
+          }
+        });
+        e.target.value = null; // reset input
+        return;
+      }
+
+      playClick();
+      setVideoFile(file);
+      setVideoFileName(file.name);
+
+      // Auto-set the preview path
+      setNewGame(prev => ({
+        ...prev,
+        videoUrl: `/videos/games/${file.name}`
+      }));
+    }
+  };
+
   const handleSaveGame = (e) => {
     e.preventDefault();
     playClick();
@@ -221,6 +271,10 @@ export default function Admin() {
       return;
     }
 
+    const platformString = Object.keys(selectedPlatforms)
+      .filter(key => selectedPlatforms[key])
+      .join(' / ');
+
     if (editingGameId) {
       // Edit mode: Update existing game in the list
       const updatedGames = games.map((game) => {
@@ -244,8 +298,11 @@ export default function Admin() {
             image: newGame.image,
             featured: newGame.featured,
             playUrl: newGame.playUrl,
-            // If new image was uploaded, preserve it for upload step
-            ...(imageFile ? { _file: imageFile, _fileName: imageFileName } : {})
+            videoUrl: newGame.videoUrl || '',
+            platform: platformString,
+            // If new image/video was uploaded, preserve for upload step
+            ...(imageFile ? { _file: imageFile, _fileName: imageFileName } : {}),
+            ...(videoFile ? { _videoFile: videoFile, _videoFileName: videoFileName } : {})
           };
         }
         return game;
@@ -282,8 +339,12 @@ export default function Admin() {
         image: newGame.image,
         featured: newGame.featured,
         playUrl: newGame.playUrl,
+        videoUrl: newGame.videoUrl || '',
+        platform: platformString,
         _file: imageFile,
-        _fileName: imageFileName
+        _fileName: imageFileName,
+        _videoFile: videoFile,
+        _videoFileName: videoFileName
       };
 
       setGames([...games, gameToAdd]);
@@ -305,10 +366,21 @@ export default function Admin() {
       releaseYear: new Date().getFullYear(),
       image: '',
       featured: false,
-      playUrl: ''
+      playUrl: '',
+      videoUrl: '',
+      platform: ''
     });
     setImageFile(null);
     setImageFileName('');
+    setVideoFile(null);
+    setVideoFileName('');
+    setSelectedPlatforms({
+      PC: false,
+      Console: false,
+      Android: false,
+      iOS: false,
+      Roblox: false
+    });
   };
 
   const handleEditGame = (game) => {
@@ -328,8 +400,24 @@ export default function Admin() {
       releaseYear: game.releaseYear || new Date().getFullYear(),
       image: game.image || '',
       featured: game.featured || false,
-      playUrl: game.playUrl || ''
+      playUrl: game.playUrl || '',
+      videoUrl: game.videoUrl || '',
+      platform: game.platform || ''
     });
+
+    const platforms = game.platform || '';
+    setSelectedPlatforms({
+      PC: platforms.includes('PC'),
+      Console: platforms.includes('Console'),
+      Android: platforms.includes('Android'),
+      iOS: platforms.includes('iOS'),
+      Roblox: platforms.includes('Roblox')
+    });
+
+    setImageFile(null);
+    setImageFileName('');
+    setVideoFile(null);
+    setVideoFileName('');
     // Scroll to form smoothly
     const formEl = document.getElementById('game-form');
     if (formEl) {
@@ -354,10 +442,21 @@ export default function Admin() {
       releaseYear: new Date().getFullYear(),
       image: '',
       featured: false,
-      playUrl: ''
+      playUrl: '',
+      videoUrl: '',
+      platform: ''
     });
     setImageFile(null);
     setImageFileName('');
+    setVideoFile(null);
+    setVideoFileName('');
+    setSelectedPlatforms({
+      PC: false,
+      Console: false,
+      Android: false,
+      iOS: false,
+      Roblox: false
+    });
   };
 
   const handleDeleteGame = (id) => {
@@ -464,11 +563,57 @@ export default function Admin() {
         }
       }
 
+      // 1.5 Upload local videos to GitHub (if any are pending)
+      const videosToUpload = games.filter(g => g._videoFile);
+      for (const game of videosToUpload) {
+        const fileContentBase64 = await fileToBase64(game._videoFile);
+        const videoPath = `public/videos/games/${game._videoFileName}`;
+        const videoApiUrl = `https://api.github.com/repos/${githubOwner}/${githubRepo}/contents/${videoPath}`;
+
+        // Check if video already exists to get SHA
+        const checkRes = await fetch(videoApiUrl + `?ref=${githubBranch}`, {
+          headers: {
+            Authorization: `token ${githubToken}`,
+            Accept: 'application/vnd.github.v3+json'
+          }
+        });
+
+        let videoSha = '';
+        if (checkRes.ok) {
+          const videoInfo = await checkRes.json();
+          videoSha = videoInfo.sha;
+        }
+
+        // Commit video to GitHub
+        const videoBody = {
+          message: `media: upload game trailer ${game._videoFileName} via Admin Panel`,
+          content: fileContentBase64,
+          branch: githubBranch
+        };
+        if (videoSha) videoBody.sha = videoSha;
+
+        const videoPutRes = await fetch(videoApiUrl, {
+          method: 'PUT',
+          headers: {
+            Authorization: `token ${githubToken}`,
+            Accept: 'application/vnd.github.v3+json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(videoBody)
+        });
+
+        if (!videoPutRes.ok) {
+          throw new Error(`Failed to upload video ${game._videoFileName} to GitHub. Status: ${videoPutRes.status}`);
+        }
+      }
+
       // 2. Clear temp file attachments from JSON list
       const gamesClean = games.map(g => {
         const clean = { ...g };
         delete clean._file;
         delete clean._fileName;
+        delete clean._videoFile;
+        delete clean._videoFileName;
         return clean;
       });
 
@@ -875,13 +1020,41 @@ export default function Admin() {
                       />
                     </div>
 
+                    {/* Supported Platforms Checkboxes */}
+                    <div className="flex flex-col gap-2 w-full text-left">
+                      <label className="font-press text-[9px] uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        Supported Platforms
+                      </label>
+                      <div className="flex flex-wrap gap-4 border-2 border-slate-950 dark:border-slate-100 p-3 bg-white dark:bg-slate-900 shadow-retro-sm">
+                        {Object.keys(selectedPlatforms).map((plat) => (
+                          <label key={plat} className="flex items-center gap-2 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={selectedPlatforms[plat]}
+                              onChange={() => {
+                                playClick();
+                                setSelectedPlatforms({
+                                  ...selectedPlatforms,
+                                  [plat]: !selectedPlatforms[plat]
+                                });
+                              }}
+                              className="w-4 h-4 cursor-pointer accent-purple-650"
+                            />
+                            <span className="font-press text-[8px] uppercase text-slate-800 dark:text-slate-200">
+                              {plat}
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* Image File Uploader */}
                     <div className="flex flex-col gap-1.5 w-full">
                       <label className="font-press text-[9px] uppercase tracking-wider text-slate-700 dark:text-slate-300">
                         Choose Game Image Thumbnail (Saved in public/images/games/ & pushed to GitHub)
                       </label>
                       <div className="flex gap-2 items-center">
-                        <label className="cursor-pointer px-4 py-2.5 border-2 border-slate-955 border-slate-950 dark:border-slate-100 font-press text-[9px] uppercase bg-slate-100 dark:bg-slate-900 shadow-retro-sm active:translate-y-[1px] hover:bg-slate-200 flex items-center gap-1.5">
+                        <label className="cursor-pointer px-4 py-2.5 border-2 border-slate-950 dark:border-slate-100 font-press text-[9px] uppercase bg-slate-100 dark:bg-slate-900 shadow-retro-sm active:translate-y-[1px] hover:bg-slate-200 flex items-center gap-1.5">
                           <Upload className="w-4 h-4" />
                           SELECT IMAGE FILE
                           <input
@@ -892,7 +1065,29 @@ export default function Admin() {
                           />
                         </label>
                         <span className="font-mono text-xs text-slate-500 truncate max-w-sm">
-                          {imageFileName || 'No file selected (will use placeholder)'}
+                          {imageFileName || (newGame.image ? newGame.image.split('/').pop() : 'No file selected (will use placeholder)')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Video File Uploader */}
+                    <div className="flex flex-col gap-1.5 w-full">
+                      <label className="font-press text-[9px] uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                        Choose Game Video Trailer (Saved in public/videos/games/ & pushed to GitHub, Max 200MB)
+                      </label>
+                      <div className="flex gap-2 items-center">
+                        <label className="cursor-pointer px-4 py-2.5 border-2 border-slate-950 dark:border-slate-100 font-press text-[9px] uppercase bg-slate-100 dark:bg-slate-900 shadow-retro-sm active:translate-y-[1px] hover:bg-slate-200 flex items-center gap-1.5">
+                          <Video className="w-4 h-4" />
+                          SELECT VIDEO FILE
+                          <input
+                            type="file"
+                            accept="video/*"
+                            onChange={handleVideoFileChange}
+                            className="hidden"
+                          />
+                        </label>
+                        <span className="font-mono text-xs text-slate-500 truncate max-w-sm">
+                          {videoFileName || (newGame.videoUrl ? newGame.videoUrl.split('/').pop() : 'No file selected')}
                         </span>
                       </div>
                     </div>
