@@ -1,50 +1,30 @@
-const CACHE_NAME = 'kafeinarts-cache-v1';
-const urlsToCache = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/favicon.ico',
-  '/logo192.png',
-  '/logo512.png'
-];
-
-// Install a service worker
-self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        return cache.addAll(urlsToCache);
-      })
-  );
+// Self-uninstalling Service Worker to clean up cache bugs and unregister PWA caching
+self.addEventListener('install', () => {
+  self.skipWaiting();
 });
 
-// Cache and return requests
-self.addEventListener('fetch', event => {
-  event.respondWith(
-    caches.match(event.request)
-      .then(response => {
-        // Cache hit - return response
-        if (response) {
-          return response;
-        }
-        return fetch(event.request);
-      })
-  );
-});
-
-// Update a service worker
 self.addEventListener('activate', event => {
-  const cacheWhitelist = [CACHE_NAME];
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          if (cacheWhitelist.indexOf(cacheName) === -1) {
-            return caches.delete(cacheName);
-          }
-          return null;
+          console.log('Cleaning up cache:', cacheName);
+          return caches.delete(cacheName);
         })
       );
+    })
+    .then(() => {
+      console.log('Unregistering service worker...');
+      return self.registration.unregister();
+    })
+    .then(() => self.clients.matchAll())
+    .then(clients => {
+      clients.forEach(client => {
+        if (client.url) {
+          console.log('Refreshing client:', client.url);
+          client.navigate(client.url);
+        }
+      });
     })
   );
 });
